@@ -11,9 +11,9 @@ namespace Minic.DI
 
 
         //  CONSTRUCTOR
-        public InjectionError(InjectionErrorType errorType, string info)
+        public InjectionError(InjectionErrorType error, string info)
         {
-            Error = errorType;
+            Error = error;
             Info = info;
         }
     }

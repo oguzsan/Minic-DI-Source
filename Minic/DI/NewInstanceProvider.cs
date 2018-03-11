@@ -6,8 +6,7 @@ namespace Minic.DI
     public class NewInstanceProvider<T> : IInstanceProvider where T : new()
     {
         //	MEMBERS
-        public readonly Type TargetType;
-        private object _Value;
+        private object _Instance;
 
 
         //  CONSTRUCTOR
@@ -18,16 +17,16 @@ namespace Minic.DI
         //  METHODS
         public void GetInstance(out object value, out bool isNew)
         {
-            if(_Value==null)
+            if(_Instance==null)
             {
-                _Value = new T();
+                _Instance = new T();
                 isNew = true;
             }
             else
             {
                 isNew = false;
             }
-            value = _Value;
+            value = _Instance;
         }
     }
 }

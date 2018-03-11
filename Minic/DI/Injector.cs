@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
-
+using System.Diagnostics;
 
 namespace Minic.DI
 {
     public class Injector : IInjector, IInjectionInstanceProvider
     {
+        //  CONSTANTS
+        private const string ERROR_ALREADY_ADDED_BINDING_FOR_TYPE = "Injection Error:Already added binding for type {0}\n{1}";
+        
+
         //  MEMBERS
         public int BindingCount{get{return _Bindings.Count;}}
         public int ProviderCount{get{return _Providers.Count;}}
@@ -31,12 +35,18 @@ namespace Minic.DI
         {
             InjectionBinding binding;
             
+            //  Check is there is an existing binding with given type
             if(_Bindings.TryGetValue(typeof(T),out binding))
             {
-                _Errors.Add(new InjectionError(InjectionErrorType.AlreadyAddedBindingForType,""));
+                //  Add error
+                string typeAsString = typeof(T).ToString();
+                string callerInfo = GetCallerInfo();
+                string errorInfo = String.Format(ERROR_ALREADY_ADDED_BINDING_FOR_TYPE,typeAsString, callerInfo);
+                _Errors.Add(new InjectionError(InjectionErrorType.AlreadyAddedBindingForType,errorInfo));
             }
             else
             {
+                //  Add binding
                 binding = new InjectionBinding(typeof(T), this);
                 _Bindings.Add(typeof(T), binding);
             }
@@ -69,5 +79,17 @@ namespace Minic.DI
         }
 
         #endregion
+        
+        private string GetCallerInfo()
+        {
+            StackTrace st = new StackTrace(true);
+            string info = String.Format("\tFilename:{0}\n\tMethod:{1}\n\tLine:{2}",
+                st.GetFrame(2).GetFileName(),
+                st.GetFrame(2).GetMethod(),
+                st.GetFrame(2).GetFileLineNumber()
+                );
+
+            return info;
+        }
     }
 }
