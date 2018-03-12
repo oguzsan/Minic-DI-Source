@@ -5,6 +5,8 @@ namespace Minic.DI
 {
     public enum InjectionErrorType
     {
-        AlreadyAddedBindingForType
+        AlreadyAddedBindingForType,
+        TypeNotAssignableToTarget,
+        ValueNotAssignableToTarget,
     }
 }

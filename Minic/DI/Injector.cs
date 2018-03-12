@@ -2,12 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+
 namespace Minic.DI
 {
     public class Injector : IInjector, IInjectionInstanceProvider
     {
         //  CONSTANTS
-        private const string ERROR_ALREADY_ADDED_BINDING_FOR_TYPE = "Injection Error:Already added binding for type {0}\n{1}";
+        private const string ERROR_ALREADY_ADDED_BINDING_FOR_TYPE = "Injection Error:Already added binding for type [{0}]\n{1}";
+        private const string ERROR_TYPE_NOT_ASSIGNABLE_TO_TARGET = "Injection Error:Given type [{0}] is not assignable to target type [{1}]\n{2}";
+        private const string ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET = "Injection Error:Given value type [{0}] is not assignable to target type [{1}]\n{2}";
         
 
         //  MEMBERS
@@ -70,12 +73,38 @@ namespace Minic.DI
 
         public void AddValue(Type targetType, object value)
         {
-            _Providers.Add(targetType, new SingleInstanceProvider(value));
+            //  Check if type of value is assignable to target type
+            if (!value.GetType().IsAssignableFrom(targetType))
+            {
+                //  Add error
+                string typeAsString = value.GetType().ToString();
+                string targetTypeAsString = targetType.ToString();
+                string callerInfo = GetCallerInfo();
+                string errorInfo = String.Format(ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
+                _Errors.Add(new InjectionError(InjectionErrorType.ValueNotAssignableToTarget, errorInfo));
+            }
+            else
+            {
+                _Providers.Add(targetType, new SingleInstanceProvider(value));
+            }
         }
 
         public void AddType<T>(Type targetType) where T : new()
         {
-            _Providers.Add(targetType,new NewInstanceProvider<T>());
+            //  Check if type T is assignable to target type
+            if (!typeof(T).IsAssignableFrom(targetType))
+            {
+                //  Add error
+                string typeAsString = typeof(T).ToString();
+                string targetTypeAsString = targetType.ToString();
+                string callerInfo = GetCallerInfo();
+                string errorInfo = String.Format(ERROR_TYPE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
+                _Errors.Add(new InjectionError(InjectionErrorType.TypeNotAssignableToTarget, errorInfo));
+            }
+            else
+            {
+                _Providers.Add(targetType,new NewInstanceProvider<T>());
+            }
         }
 
         #endregion
