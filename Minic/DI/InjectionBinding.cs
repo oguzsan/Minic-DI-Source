@@ -3,30 +3,32 @@ using System;
 
 namespace Minic.DI
 {
-    public class InjectionBinding : IInjectionValueOption
+    public class InjectionBinding : IInstanceProviderOptions
     {
         //	MEMBERS
         public readonly Type TargetType;
-        private IInjectionInstanceProvider _InstanceProvider;
+        public IInstanceProvider InstanceProvider{get; private set;}
+        private IInstanceProviderList _InstanceProviderList;
+        
 
 
         //	CONSTRUCTOR
-        public InjectionBinding(Type targetType, IInjectionInstanceProvider instanceProvider)
+        public InjectionBinding(Type targetType, IInstanceProviderList instanceProviderList)
         {
             TargetType = targetType;
-            _InstanceProvider = instanceProvider;
+            _InstanceProviderList = instanceProviderList;
         }
 
 
         //  METHODS
         public void ToValue(object value)
         {
-            _InstanceProvider.AddValue(TargetType, value);
+            InstanceProvider = _InstanceProviderList.AddValue(TargetType, value);
         }
 
         public void ToType<T>() where T : new()
         {
-            _InstanceProvider.AddType<T>(TargetType);
+            InstanceProvider = _InstanceProviderList.AddType<T>(TargetType);
         }
     }
 }

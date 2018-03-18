@@ -12,8 +12,9 @@ namespace Minic.DI
 
 
         //  METHODS
-        IInjectionValueOption AddBinding<T>();
+        IInstanceProviderOptions AddBinding<T>();
         bool HasBindingForType(Type type);
         InjectionError GetError(int index);
+        void InjectInto(object container);
     }
 }

@@ -3,7 +3,7 @@ using System;
 
 namespace Minic.DI
 {
-    public interface IInjectionValueOption
+    public interface IInstanceProviderOptions
     {
         //	METHODS
         void ToValue(object value);

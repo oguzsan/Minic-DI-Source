@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-
+using System.Reflection;
 
 namespace Minic.DI
 {
-    public class Injector : IInjector, IInjectionInstanceProvider
+    public class Injector : IInjector, IInstanceProviderList, IMemberInjector
     {
         //  CONSTANTS
-        private const string ERROR_ALREADY_ADDED_BINDING_FOR_TYPE = "Injection Error:Already added binding for type [{0}]\n{1}";
-        private const string ERROR_TYPE_NOT_ASSIGNABLE_TO_TARGET = "Injection Error:Given type [{0}] is not assignable to target type [{1}]\n{2}";
-        private const string ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET = "Injection Error:Given value type [{0}] is not assignable to target type [{1}]\n{2}";
+        private const string ERROR_ALREADY_ADDED_BINDING_FOR_TYPE   = "Injection Error:Already added binding for type [{0}]\n{1}";
+        private const string ERROR_TYPE_NOT_ASSIGNABLE_TO_TARGET    = "Injection Error:Given type [{0}] is not assignable to target type [{1}]\n{2}";
+        private const string ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET   = "Injection Error:Given value type [{0}] is not assignable to target type [{1}]\n{2}";
+        private const string ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE    = "Injection Error:Can not find binding for type [{0}]\n{1}";
         
 
         //  MEMBERS
@@ -19,6 +20,7 @@ namespace Minic.DI
         public int ErrorCount{get{return _Errors.Count;}}
         private Dictionary<Type, InjectionBinding> _Bindings;
         private Dictionary<Type, IInstanceProvider> _Providers;
+        private Dictionary<Type, ReflectionCache> _Reflections;
         private List<InjectionError> _Errors;
 
 
@@ -27,6 +29,7 @@ namespace Minic.DI
         {
             _Bindings = new Dictionary<Type, InjectionBinding>();
             _Providers = new Dictionary<Type, IInstanceProvider>();
+            _Reflections = new Dictionary<Type, ReflectionCache>();
             _Errors = new List<InjectionError>();
         }
 
@@ -34,7 +37,7 @@ namespace Minic.DI
         //  METHODS
         #region IInjector implementations
 
-        public IInjectionValueOption AddBinding<T>()
+        public IInstanceProviderOptions AddBinding<T>()
         {
             InjectionBinding binding;
             
@@ -67,14 +70,58 @@ namespace Minic.DI
             return _Errors[index];
         }
 
+        public void InjectInto(object container)
+        {
+            //  Get reflection data for object. Will be performed once per type
+            ReflectionCache classReflection = GetReflection(container.GetType());
+
+            //  Inject into fields
+            foreach (FieldInfo fieldInfo in classReflection.Fields)
+            {
+                if (InjectIntoField(fieldInfo, container))
+                {
+                    continue;
+                }
+                else
+                {
+                    //  Add error
+                    string typeAsString = fieldInfo.FieldType.ToString();
+                    string callerInfo = GetCallerInfo();
+                    string errorInfo = String.Format(ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE,typeAsString, callerInfo);
+                    _Errors.Add(new InjectionError(InjectionErrorType.CanNotFindBindingForType,errorInfo));
+
+                    continue;
+                }
+            }
+
+            //  Inject into properties
+            foreach (PropertyInfo propertyInfo in classReflection.Properties)
+            {
+                if (InjectIntoProperty(propertyInfo, container))
+                {
+                    continue;
+                }
+                else
+                {
+                    //  Add error
+                    string typeAsString = propertyInfo.PropertyType.ToString();
+                    string callerInfo = GetCallerInfo();
+                    string errorInfo = String.Format(ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE,typeAsString, callerInfo);
+                    _Errors.Add(new InjectionError(InjectionErrorType.CanNotFindBindingForType,errorInfo));
+
+                    continue;
+                }
+            }
+        }
+
         #endregion
 
-        #region IInjectionInstanceProvider implementations
+        #region IInstanceProviderList implementations
 
-        public void AddValue(Type targetType, object value)
+        public IInstanceProvider AddValue(Type targetType, object value)
         {
             //  Check if type of value is assignable to target type
-            if (!value.GetType().IsAssignableFrom(targetType))
+            if (!targetType.IsAssignableFrom(value.GetType()))
             {
                 //  Add error
                 string typeAsString = value.GetType().ToString();
@@ -82,17 +129,19 @@ namespace Minic.DI
                 string callerInfo = GetCallerInfo();
                 string errorInfo = String.Format(ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
                 _Errors.Add(new InjectionError(InjectionErrorType.ValueNotAssignableToTarget, errorInfo));
+
+                return null;
             }
-            else
-            {
-                _Providers.Add(targetType, new SingleInstanceProvider(value));
-            }
+
+            IInstanceProvider provider = new SingleInstanceProvider(value);
+            _Providers.Add(targetType, provider);
+            return provider;
         }
 
-        public void AddType<T>(Type targetType) where T : new()
+        public IInstanceProvider AddType<T>(Type targetType) where T : new()
         {
             //  Check if type T is assignable to target type
-            if (!typeof(T).IsAssignableFrom(targetType))
+            if (!targetType.IsAssignableFrom(typeof(T)))
             {
                 //  Add error
                 string typeAsString = typeof(T).ToString();
@@ -100,15 +149,100 @@ namespace Minic.DI
                 string callerInfo = GetCallerInfo();
                 string errorInfo = String.Format(ERROR_TYPE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
                 _Errors.Add(new InjectionError(InjectionErrorType.TypeNotAssignableToTarget, errorInfo));
+
+                return null;
             }
-            else
-            {
-                _Providers.Add(targetType,new NewInstanceProvider<T>());
-            }
+            
+            IInstanceProvider provider = new NewInstanceProvider<T>();
+            _Providers.Add(targetType,provider);
+
+            return provider;
         }
 
         #endregion
         
+        #region IMemberInjector implementations
+        
+        public bool InjectIntoField(FieldInfo fieldInfo, object container)
+        {
+            InjectionBinding binding = null;
+            if (_Bindings.TryGetValue(fieldInfo.FieldType, out binding) == true)
+            {
+                object value;
+                bool isNew;
+                binding.InstanceProvider.GetInstance(out value, out isNew);
+                if (isNew)
+                {
+                    InjectInto(value);
+                }
+                fieldInfo.SetValue(container, value);
+                return true;
+            }
+            return false;
+        }
+		
+        public bool InjectIntoProperty(PropertyInfo propertyInfo, object container)
+        {
+            InjectionBinding binding = null;
+            if (_Bindings.TryGetValue(propertyInfo.PropertyType, out binding) == true)
+            {
+                object value;
+                bool isNew;
+                binding.InstanceProvider.GetInstance(out value, out isNew);
+                if (isNew)
+                {
+                    InjectInto(value);
+                }
+                propertyInfo.SetValue(container, value);
+                return true;
+            }
+            return false;
+        }
+        
+        #endregion
+
+        private ReflectionCache GetReflection(Type type)
+        {
+            ReflectionCache reflection = null;
+
+            if (_Reflections.TryGetValue(type, out reflection) == false)
+            {
+                reflection = new ReflectionCache(type);
+
+                MemberInfo[] fieldInfoList = type.FindMembers( MemberTypes.Field, 
+                    BindingFlags.Instance | 
+                    BindingFlags.Public | BindingFlags.NonPublic | 
+                    BindingFlags.SetField | BindingFlags.SetProperty , null, null);
+
+                foreach (MemberInfo fieldInfo in fieldInfoList)
+                {
+                    object[] attributeList = fieldInfo.GetCustomAttributes(typeof(InjectAttribute), true);
+                    if (attributeList.Length > 0)
+                    {
+                        reflection.Fields.AddLast((FieldInfo)fieldInfo);
+                    }
+                }
+
+                MemberInfo[] propertyInfoList = type.FindMembers( MemberTypes.Property,
+                    BindingFlags.Instance | 
+                    BindingFlags.Public | BindingFlags.NonPublic | 
+                    BindingFlags.SetField | BindingFlags.SetProperty , null, null);
+
+                foreach (MemberInfo propertyInfo in propertyInfoList)
+                {
+                    object[] attributeList = propertyInfo.GetCustomAttributes(typeof(InjectAttribute), true);
+                    if (attributeList.Length > 0)
+                    {
+                        reflection.Properties.AddLast((PropertyInfo)propertyInfo);
+                    }
+                }
+
+                _Reflections[type] = reflection;
+            }
+
+            return reflection;
+        }
+
         private string GetCallerInfo()
         {
             StackTrace st = new StackTrace(true);

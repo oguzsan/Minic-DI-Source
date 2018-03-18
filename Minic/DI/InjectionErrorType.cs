@@ -8,5 +8,6 @@ namespace Minic.DI
         AlreadyAddedBindingForType,
         TypeNotAssignableToTarget,
         ValueNotAssignableToTarget,
+        CanNotFindBindingForType,
     }
 }
