@@ -46,7 +46,7 @@ namespace Minic.DI
             {
                 //  Add error
                 string typeAsString = typeof(T).ToString();
-                string callerInfo = GetCallerInfo();
+                string callerInfo = GetCallerInfo(1);
                 string errorInfo = String.Format(ERROR_ALREADY_ADDED_BINDING_FOR_TYPE,typeAsString, callerInfo);
                 _Errors.Add(new InjectionError(InjectionErrorType.AlreadyAddedBindingForType,errorInfo));
             }
@@ -86,7 +86,7 @@ namespace Minic.DI
                 {
                     //  Add error
                     string typeAsString = fieldInfo.FieldType.ToString();
-                    string callerInfo = GetCallerInfo();
+                    string callerInfo = GetCallerInfo(1);
                     string errorInfo = String.Format(ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE,typeAsString, callerInfo);
                     _Errors.Add(new InjectionError(InjectionErrorType.CanNotFindBindingForType,errorInfo));
 
@@ -105,7 +105,7 @@ namespace Minic.DI
                 {
                     //  Add error
                     string typeAsString = propertyInfo.PropertyType.ToString();
-                    string callerInfo = GetCallerInfo();
+                    string callerInfo = GetCallerInfo(1);
                     string errorInfo = String.Format(ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE,typeAsString, callerInfo);
                     _Errors.Add(new InjectionError(InjectionErrorType.CanNotFindBindingForType,errorInfo));
 
@@ -126,7 +126,7 @@ namespace Minic.DI
                 //  Add error
                 string typeAsString = value.GetType().ToString();
                 string targetTypeAsString = targetType.ToString();
-                string callerInfo = GetCallerInfo();
+                string callerInfo = GetCallerInfo(2);
                 string errorInfo = String.Format(ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
                 _Errors.Add(new InjectionError(InjectionErrorType.ValueNotAssignableToTarget, errorInfo));
 
@@ -146,7 +146,7 @@ namespace Minic.DI
                 //  Add error
                 string typeAsString = typeof(T).ToString();
                 string targetTypeAsString = targetType.ToString();
-                string callerInfo = GetCallerInfo();
+                string callerInfo = GetCallerInfo(2);
                 string errorInfo = String.Format(ERROR_TYPE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
                 _Errors.Add(new InjectionError(InjectionErrorType.TypeNotAssignableToTarget, errorInfo));
 
@@ -193,7 +193,7 @@ namespace Minic.DI
                 {
                     InjectInto(value);
                 }
-                propertyInfo.SetValue(container, value);
+                propertyInfo.SetValue(container, value, null);
                 return true;
             }
             return false;
@@ -243,13 +243,14 @@ namespace Minic.DI
             return reflection;
         }
 
-        private string GetCallerInfo()
+        private string GetCallerInfo(int upLevel=1)
         {
             StackTrace st = new StackTrace(true);
+            StackFrame sf = st.GetFrame(1+uppLevel)
             string info = String.Format("\tFilename:{0}\n\tMethod:{1}\n\tLine:{2}",
-                st.GetFrame(2).GetFileName(),
-                st.GetFrame(2).GetMethod(),
-                st.GetFrame(2).GetFileLineNumber()
+                sf.GetFileName(),
+                sf.GetMethod(),
+                sf.GetFileLineNumber()
                 );
 
             return info;
