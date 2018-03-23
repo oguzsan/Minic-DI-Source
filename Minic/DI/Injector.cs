@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Minic.DI
 {
-    public class Injector : IInjector, IInstanceProviderList, IMemberInjector
+    public class Injector : IInjectorTester, IInstanceProviderList, IMemberInjector
     {
         //  CONSTANTS
         private const string ERROR_ALREADY_ADDED_BINDING_FOR_TYPE   = "Injection Error:Already added binding for type [{0}]\n{1}";
@@ -246,7 +246,7 @@ namespace Minic.DI
         private string GetCallerInfo(int upLevel=1)
         {
             StackTrace st = new StackTrace(true);
-            StackFrame sf = st.GetFrame(1+uppLevel)
+            StackFrame sf = st.GetFrame(1+upLevel);
             string info = String.Format("\tFilename:{0}\n\tMethod:{1}\n\tLine:{2}",
                 sf.GetFileName(),
                 sf.GetMethod(),
