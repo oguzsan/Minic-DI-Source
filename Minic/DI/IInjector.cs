@@ -1,4 +1,6 @@
 using System;
+using Minic.DI.Error;
+using Minic.DI.Provider;
 
 
 namespace Minic.DI

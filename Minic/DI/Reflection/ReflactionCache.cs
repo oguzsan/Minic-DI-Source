@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Collections.Generic;
 
 
-namespace Minic.DI
+namespace Minic.DI.Reflection
 {
     public class ReflectionCache
     {

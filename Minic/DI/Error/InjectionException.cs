@@ -1,7 +1,7 @@
 using System;
 
 
-namespace Minic.DI
+namespace Minic.DI.Error
 {
     public class InjectionException : Exception
     {

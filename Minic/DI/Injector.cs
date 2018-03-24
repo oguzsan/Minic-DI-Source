@@ -2,19 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using Minic.DI.Error;
+using Minic.DI.Provider;
+using Minic.DI.Reflection;
 
 
 namespace Minic.DI
 {
     public class Injector : IInjectorTester, IInstanceProviderList, IMemberInjector
     {
-        //  CONSTANTS
-        private const string ERROR_ALREADY_ADDED_BINDING_FOR_TYPE   = "Injection Error:Already added binding for type [{0}]\n{1}";
-        private const string ERROR_TYPE_NOT_ASSIGNABLE_TO_TARGET    = "Injection Error:Given type [{0}] is not assignable to target type [{1}]\n{2}";
-        private const string ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET   = "Injection Error:Given value of type [{0}] is not assignable to target type [{1}]\n{2}";
-        private const string ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE    = "Injection Error:Can not find binding for type [{0}]\n{1}";
-        
-
         //  MEMBERS
         public int BindingCount{get{return _Bindings.Count;}}
         public int ProviderCount{get{return _Providers.Count;}}
@@ -22,8 +18,9 @@ namespace Minic.DI
         private Dictionary<Type, InjectionBinding> _Bindings;
         private Dictionary<Type, IInstanceProvider> _Providers;
         private Dictionary<Type, ReflectionCache> _Reflections;
-        private List<InjectionError> _Errors;
         private bool _ShouldThrowException;
+        private List<InjectionError> _Errors;
+        private string[] _ErrorMessages;
 
 
         //	CONSTRUCTOR
@@ -32,8 +29,14 @@ namespace Minic.DI
             _Bindings = new Dictionary<Type, InjectionBinding>();
             _Providers = new Dictionary<Type, IInstanceProvider>();
             _Reflections = new Dictionary<Type, ReflectionCache>();
-            _Errors = new List<InjectionError>();
             _ShouldThrowException = shouldThrowException;
+            _Errors = new List<InjectionError>();
+            _ErrorMessages = new string[Enum.GetValues(typeof(InjectionErrorType)).Length];
+            _ErrorMessages[(int)InjectionErrorType.AlreadyAddedBindingForType           ] = "Injection Error:Already added binding for type [{1}]\n{0}";
+            _ErrorMessages[(int)InjectionErrorType.AlreadyAddedTypeWithDifferentProvider] = "Injection Error:Requested provider with type [{2}] already added with a different provider\n[{0}]]";
+            _ErrorMessages[(int)InjectionErrorType.TypeNotAssignableToTarget            ] = "Injection Error:Given type [{2}] is not assignable to binding type [{1}]\n{0}";
+            _ErrorMessages[(int)InjectionErrorType.ValueNotAssignableToBindingType      ] = "Injection Error:Given value of type [{2}] is not assignable to binding type [{1}]\n{0}";
+            _ErrorMessages[(int)InjectionErrorType.CanNotFindBindingForType             ] = "Injection Error:Can not find binding for type [{1}]\n{0}";
         }
 
 
@@ -51,31 +54,25 @@ namespace Minic.DI
 
         public IInstanceProviderOptions AddBinding<T>()
         {
+            Type bindingType = typeof(T);
+
             InjectionBinding binding;
             
             //  Check is there is an existing binding with given type
-            if(_Bindings.TryGetValue(typeof(T),out binding))
+            if(_Bindings.TryGetValue(bindingType,out binding))
             {
-                //  Error details
-                string typeAsString = typeof(T).ToString();
-                string callerInfo = GetCallerInfo(1);
-                string errorMessage = String.Format(ERROR_ALREADY_ADDED_BINDING_FOR_TYPE,typeAsString, callerInfo);
-                InjectionErrorType errorType = InjectionErrorType.AlreadyAddedBindingForType;
-
-                //  Add error
-                _Errors.Add(new InjectionError(errorType,errorMessage));
-
-                //  Throw exception
+                //  Handler error
+                InjectionError error = CreateError(InjectionErrorType.AlreadyAddedBindingForType, bindingType, null, 1);
                 if(_ShouldThrowException)
                 {
-                    throw new InjectionException(errorType,errorMessage);
+                    throw new InjectionException(error.Error,error.Message);
                 }
             }
             else
             {
                 //  Add binding
-                binding = new InjectionBinding(typeof(T), this);
-                _Bindings.Add(typeof(T), binding);
+                binding = new InjectionBinding(bindingType, this);
+                _Bindings.Add(bindingType, binding);
             }
             
             return binding;
@@ -88,7 +85,7 @@ namespace Minic.DI
 
         public void InjectInto(object container)
         {
-            //  Get reflection data for object. Will be performed once per type
+            //  Get reflection container for object. Will be performed once per type
             ReflectionCache classReflection = GetReflection(container.GetType());
 
             //  Inject into fields
@@ -100,19 +97,11 @@ namespace Minic.DI
                 }
                 else
                 {
-                    //  Error details
-                    string typeAsString = fieldInfo.FieldType.ToString();
-                    string callerInfo = GetCallerInfo(1);
-                    string errorMessage = String.Format(ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE,typeAsString, callerInfo);
-                    InjectionErrorType errorType = InjectionErrorType.CanNotFindBindingForType;
-
-                    //  Add error
-                    _Errors.Add(new InjectionError(errorType,errorMessage));
-
-                    //  Throw exception
+                    //  Handler error
+                    InjectionError error = CreateError(InjectionErrorType.CanNotFindBindingForType, fieldInfo.FieldType, null, 1);
                     if(_ShouldThrowException)
                     {
-                        throw new InjectionException(errorType,errorMessage);
+                        throw new InjectionException(error.Error,error.Message);
                     }
 
                     continue;
@@ -128,19 +117,11 @@ namespace Minic.DI
                 }
                 else
                 {
-                    //  Error details
-                    string typeAsString = propertyInfo.PropertyType.ToString();
-                    string callerInfo = GetCallerInfo(1);
-                    string errorMessage = String.Format(ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE,typeAsString, callerInfo);
-                    InjectionErrorType errorType = InjectionErrorType.CanNotFindBindingForType;
-
-                    //  Add error
-                    _Errors.Add(new InjectionError(errorType,errorMessage));
-
-                    //  Throw exception
+                    //  Handler error
+                    InjectionError error = CreateError(InjectionErrorType.CanNotFindBindingForType, propertyInfo.PropertyType, null, 1);
                     if(_ShouldThrowException)
                     {
-                        throw new InjectionException(errorType,errorMessage);
+                        throw new InjectionException(error.Error,error.Message);
                     }
 
                     continue;
@@ -152,61 +133,84 @@ namespace Minic.DI
 
         #region IInstanceProviderList implementations
 
-        public IInstanceProvider AddValue(Type targetType, object value)
+        public IInstanceProvider AddValue(Type bindingType, object value)
         {
+            Type providerType = value.GetType();
+
             //  Check if type of value is assignable to target type
-            if (!targetType.IsAssignableFrom(value.GetType()))
+            if (!bindingType.IsAssignableFrom(providerType))
             {
-                //  Error details
-                string typeAsString = value.GetType().ToString();
-                string targetTypeAsString = targetType.ToString();
-                string callerInfo = GetCallerInfo(2);
-                string errorMessage = String.Format(ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
-                InjectionErrorType errorType = InjectionErrorType.ValueNotAssignableToTarget;
-
-                //  Add error
-                _Errors.Add(new InjectionError(errorType,errorMessage));
-
-                //  Throw exception
+                //  Handler error
+                InjectionError error = CreateError(InjectionErrorType.ValueNotAssignableToBindingType, bindingType, providerType, 2);
                 if(_ShouldThrowException)
                 {
-                    throw new InjectionException(errorType,errorMessage);
+                    throw new InjectionException(error.Error,error.Message);
                 }
 
                 return null;
             }
 
-            IInstanceProvider provider = new SingleInstanceProvider(value);
-            _Providers.Add(targetType, provider);
+            //  Check if a provider with given type exist
+            IInstanceProvider provider;
+            if(_Providers.TryGetValue(providerType, out provider))
+            {
+                //  Check if existing provider is same with requested one
+                if(provider.GetType()!=typeof(SingleInstanceProvider))
+                {
+                    //  Handler error
+                    InjectionError error = CreateError(InjectionErrorType.AlreadyAddedTypeWithDifferentProvider, bindingType, providerType, 2);
+                    if(_ShouldThrowException)
+                    {
+                        throw new InjectionException(error.Error,error.Message);
+                    }
+                }
+            }
+            else
+            {
+                provider = new SingleInstanceProvider(value);
+                _Providers.Add(providerType,provider);
+            }
+
             return provider;
         }
 
-        public IInstanceProvider AddType<T>(Type targetType) where T : new()
+        public IInstanceProvider AddType<T>(Type bindingType) where T : new()
         {
+            Type providerType = typeof(T);
+
             //  Check if type T is assignable to target type
-            if (!targetType.IsAssignableFrom(typeof(T)))
+            if (!bindingType.IsAssignableFrom(providerType))
             {
-                //  Error details
-                string typeAsString = typeof(T).ToString();
-                string targetTypeAsString = targetType.ToString();
-                string callerInfo = GetCallerInfo(2);
-                string errorMessage = String.Format(ERROR_TYPE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
-                InjectionErrorType errorType = InjectionErrorType.TypeNotAssignableToTarget;
-
-                //  Add error
-                _Errors.Add(new InjectionError(errorType,errorMessage));
-
-                //  Throw exception
+                //  Handler error
+                InjectionError error = CreateError(InjectionErrorType.TypeNotAssignableToTarget, bindingType, providerType, 2);
                 if(_ShouldThrowException)
                 {
-                    throw new InjectionException(errorType,errorMessage);
+                    throw new InjectionException(error.Error,error.Message);
                 }
 
                 return null;
             }
             
-            IInstanceProvider provider = new NewInstanceProvider<T>();
-            _Providers.Add(targetType,provider);
+            //  Check if a provider with given type exist
+            IInstanceProvider provider;
+            if(_Providers.TryGetValue(providerType, out provider))
+            {
+                //  Check if existing provider is same with requested one
+                if(provider.GetType()!=typeof(NewInstanceProvider<T>))
+                {
+                    //  Handler error
+                    InjectionError error = CreateError(InjectionErrorType.AlreadyAddedTypeWithDifferentProvider, bindingType, providerType, 2);
+                    if(_ShouldThrowException)
+                    {
+                        throw new InjectionException(error.Error,error.Message);
+                    }
+                }
+            }
+            else
+            {
+                provider = new NewInstanceProvider<T>();
+                _Providers.Add(providerType,provider);
+            }
 
             return provider;
         }
@@ -295,17 +299,28 @@ namespace Minic.DI
             return reflection;
         }
 
-        private string GetCallerInfo(int upLevel=1)
+        private InjectionError CreateError(InjectionErrorType errorType, Type bindingType=null, Type providerType=null, int callerLevel=0)
+        {
+            string callerInfo = GetCallerInfo(1+callerLevel);
+            string bindingTypeAsString = (bindingType!=null)?(bindingType.ToString()):("");
+            string providerTypeAsString = (providerType!=null)?(providerType.ToString()):("");
+            object[] args = new object[]{ callerInfo, bindingTypeAsString, providerTypeAsString};
+            string errorMessage = String.Format(_ErrorMessages[(int)errorType], args);
+
+            InjectionError error = new InjectionError(errorType,errorMessage);
+            _Errors.Add(error);
+
+            return error;
+        }
+
+        private string GetCallerInfo(int callerLevel=0)
         {
             StackTrace st = new StackTrace(true);
-            StackFrame sf = st.GetFrame(1+upLevel);
-            string info = String.Format("\tFilename:{0}\n\tMethod:{1}\n\tLine:{2}",
-                sf.GetFileName(),
-                sf.GetMethod(),
-                sf.GetFileLineNumber()
-                );
+            StackFrame sf = st.GetFrame(1+callerLevel);
+            string info = String.Format("\tFilename:{0}\n\tMethod:{1}\n\tLine:{2}", sf.GetFileName(), sf.GetMethod(), sf.GetFileLineNumber() );
 
             return info;
         }
+
     }
 }

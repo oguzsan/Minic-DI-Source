@@ -1,13 +1,14 @@
 using System;
 
 
-namespace Minic.DI
+namespace Minic.DI.Error
 {
     public enum InjectionErrorType
     {
         AlreadyAddedBindingForType,
+        AlreadyAddedTypeWithDifferentProvider,
         TypeNotAssignableToTarget,
-        ValueNotAssignableToTarget,
+        ValueNotAssignableToBindingType,
         CanNotFindBindingForType,
     }
 }

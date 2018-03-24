@@ -1,4 +1,5 @@
 using System;
+using Minic.DI.Provider;
 
 
 namespace Minic.DI
@@ -6,7 +7,7 @@ namespace Minic.DI
     public class InjectionBinding : IInstanceProviderOptions
     {
         //	MEMBERS
-        public readonly Type TargetType;
+        public readonly Type BindingType;
         public IInstanceProvider InstanceProvider{get; private set;}
         private IInstanceProviderList _InstanceProviderList;
         
@@ -15,7 +16,7 @@ namespace Minic.DI
         //	CONSTRUCTOR
         public InjectionBinding(Type targetType, IInstanceProviderList instanceProviderList)
         {
-            TargetType = targetType;
+            BindingType = targetType;
             _InstanceProviderList = instanceProviderList;
         }
 
@@ -23,12 +24,12 @@ namespace Minic.DI
         //  METHODS
         public void ToValue(object value)
         {
-            InstanceProvider = _InstanceProviderList.AddValue(TargetType, value);
+            InstanceProvider = _InstanceProviderList.AddValue(BindingType, value);
         }
 
         public void ToType<T>() where T : new()
         {
-            InstanceProvider = _InstanceProviderList.AddType<T>(TargetType);
+            InstanceProvider = _InstanceProviderList.AddType<T>(BindingType);
         }
     }
 }

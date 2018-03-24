@@ -1,7 +1,7 @@
 using System;
 
 
-namespace Minic.DI
+namespace Minic.DI.Provider
 {
     public interface IInstanceProviderOptions
     {
