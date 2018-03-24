@@ -15,5 +15,6 @@ namespace Minic.DI
         IInstanceProviderOptions AddBinding<T>();
         InjectionError GetError(int index);
         void InjectInto(object container);
+        T GetInstance<T>();
     }
 }

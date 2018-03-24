@@ -129,6 +129,33 @@ namespace Minic.DI
             }
         }
 
+        public T GetInstance<T>()
+        {
+            Type bindingType = typeof(T);
+
+            object value = null;
+            InjectionBinding binding = null;
+            if (_Bindings.TryGetValue(bindingType, out binding) == true)
+            {
+                bool isNew;
+                binding.InstanceProvider.GetInstance(out value, out isNew);
+                if (isNew)
+                {
+                    InjectInto(value);
+                }
+            }
+            else
+            {
+                //  Handler error
+                InjectionError error = CreateError(InjectionErrorType.CanNotFindBindingForType, bindingType, null, 1);
+                if(_ShouldThrowException)
+                {
+                    throw new InjectionException(error.Error,error.Message);
+                }
+            }
+
+            return (T)value;
+        }
         #endregion
 
         #region IInstanceProviderList implementations
