@@ -83,7 +83,7 @@ namespace Minic.DI
             return _Errors[index];
         }
 
-        public void InjectInto(object container)
+        public void InjectInto(object container, IMemberInjector injectionOverride = null)
         {
             //  Get reflection container for object. Will be performed once per type
             ReflectionCache classReflection = GetReflection(container.GetType());
@@ -91,7 +91,11 @@ namespace Minic.DI
             //  Inject into fields
             foreach (FieldInfo fieldInfo in classReflection.Fields)
             {
-                if (InjectIntoField(fieldInfo, container))
+                if(injectionOverride!=null && injectionOverride.InjectIntoField(fieldInfo, container))
+                {
+                    continue;
+                }
+                else if (InjectIntoField(fieldInfo, container))
                 {
                     continue;
                 }
@@ -111,7 +115,12 @@ namespace Minic.DI
             //  Inject into properties
             foreach (PropertyInfo propertyInfo in classReflection.Properties)
             {
-                if (InjectIntoProperty(propertyInfo, container))
+                
+                if(injectionOverride!=null && injectionOverride.InjectIntoProperty(propertyInfo, container))
+                {
+                    continue;
+                }
+                else if (InjectIntoProperty(propertyInfo, container))
                 {
                     continue;
                 }
