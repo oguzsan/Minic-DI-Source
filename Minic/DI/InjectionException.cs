@@ -3,18 +3,16 @@ using System;
 
 namespace Minic.DI
 {
-    public class InjectionError
+    public class InjectionException : Exception
     {
         //  MEMBERS
         public readonly InjectionErrorType Error;
-        public readonly string Message;
 
 
         //  CONSTRUCTOR
-        public InjectionError(InjectionErrorType error, string message)
+        public InjectionException(InjectionErrorType error,string message) : base(message)
         {
             Error = error;
-            Message = message;
         }
     }
 }

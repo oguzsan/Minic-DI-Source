@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 
+
 namespace Minic.DI
 {
     public class Injector : IInjectorTester, IInstanceProviderList, IMemberInjector
@@ -10,7 +11,7 @@ namespace Minic.DI
         //  CONSTANTS
         private const string ERROR_ALREADY_ADDED_BINDING_FOR_TYPE   = "Injection Error:Already added binding for type [{0}]\n{1}";
         private const string ERROR_TYPE_NOT_ASSIGNABLE_TO_TARGET    = "Injection Error:Given type [{0}] is not assignable to target type [{1}]\n{2}";
-        private const string ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET   = "Injection Error:Given value type [{0}] is not assignable to target type [{1}]\n{2}";
+        private const string ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET   = "Injection Error:Given value of type [{0}] is not assignable to target type [{1}]\n{2}";
         private const string ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE    = "Injection Error:Can not find binding for type [{0}]\n{1}";
         
 
@@ -22,19 +23,30 @@ namespace Minic.DI
         private Dictionary<Type, IInstanceProvider> _Providers;
         private Dictionary<Type, ReflectionCache> _Reflections;
         private List<InjectionError> _Errors;
+        private bool _ShouldThrowException;
 
 
         //	CONSTRUCTOR
-        public Injector()
+        public Injector(bool shouldThrowException=false)
         {
             _Bindings = new Dictionary<Type, InjectionBinding>();
             _Providers = new Dictionary<Type, IInstanceProvider>();
             _Reflections = new Dictionary<Type, ReflectionCache>();
             _Errors = new List<InjectionError>();
+            _ShouldThrowException = shouldThrowException;
         }
 
 
         //  METHODS
+        #region IInjectorTester implementations
+
+        public bool HasBindingForType(Type type)
+        {
+            return _Bindings.ContainsKey(type);
+        }
+
+        #endregion
+
         #region IInjector implementations
 
         public IInstanceProviderOptions AddBinding<T>()
@@ -44,11 +56,20 @@ namespace Minic.DI
             //  Check is there is an existing binding with given type
             if(_Bindings.TryGetValue(typeof(T),out binding))
             {
-                //  Add error
+                //  Error details
                 string typeAsString = typeof(T).ToString();
                 string callerInfo = GetCallerInfo(1);
-                string errorInfo = String.Format(ERROR_ALREADY_ADDED_BINDING_FOR_TYPE,typeAsString, callerInfo);
-                _Errors.Add(new InjectionError(InjectionErrorType.AlreadyAddedBindingForType,errorInfo));
+                string errorMessage = String.Format(ERROR_ALREADY_ADDED_BINDING_FOR_TYPE,typeAsString, callerInfo);
+                InjectionErrorType errorType = InjectionErrorType.AlreadyAddedBindingForType;
+
+                //  Add error
+                _Errors.Add(new InjectionError(errorType,errorMessage));
+
+                //  Throw exception
+                if(_ShouldThrowException)
+                {
+                    throw new InjectionException(errorType,errorMessage);
+                }
             }
             else
             {
@@ -58,11 +79,6 @@ namespace Minic.DI
             }
             
             return binding;
-        }
-
-        public bool HasBindingForType(Type type)
-        {
-            return _Bindings.ContainsKey(type);
         }
 
         public InjectionError GetError(int index)
@@ -84,11 +100,20 @@ namespace Minic.DI
                 }
                 else
                 {
-                    //  Add error
+                    //  Error details
                     string typeAsString = fieldInfo.FieldType.ToString();
                     string callerInfo = GetCallerInfo(1);
-                    string errorInfo = String.Format(ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE,typeAsString, callerInfo);
-                    _Errors.Add(new InjectionError(InjectionErrorType.CanNotFindBindingForType,errorInfo));
+                    string errorMessage = String.Format(ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE,typeAsString, callerInfo);
+                    InjectionErrorType errorType = InjectionErrorType.CanNotFindBindingForType;
+
+                    //  Add error
+                    _Errors.Add(new InjectionError(errorType,errorMessage));
+
+                    //  Throw exception
+                    if(_ShouldThrowException)
+                    {
+                        throw new InjectionException(errorType,errorMessage);
+                    }
 
                     continue;
                 }
@@ -103,11 +128,20 @@ namespace Minic.DI
                 }
                 else
                 {
-                    //  Add error
+                    //  Error details
                     string typeAsString = propertyInfo.PropertyType.ToString();
                     string callerInfo = GetCallerInfo(1);
-                    string errorInfo = String.Format(ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE,typeAsString, callerInfo);
-                    _Errors.Add(new InjectionError(InjectionErrorType.CanNotFindBindingForType,errorInfo));
+                    string errorMessage = String.Format(ERROR_CAN_NOT_FIND_BINDING_FOR_TYPE,typeAsString, callerInfo);
+                    InjectionErrorType errorType = InjectionErrorType.CanNotFindBindingForType;
+
+                    //  Add error
+                    _Errors.Add(new InjectionError(errorType,errorMessage));
+
+                    //  Throw exception
+                    if(_ShouldThrowException)
+                    {
+                        throw new InjectionException(errorType,errorMessage);
+                    }
 
                     continue;
                 }
@@ -123,12 +157,21 @@ namespace Minic.DI
             //  Check if type of value is assignable to target type
             if (!targetType.IsAssignableFrom(value.GetType()))
             {
-                //  Add error
+                //  Error details
                 string typeAsString = value.GetType().ToString();
                 string targetTypeAsString = targetType.ToString();
                 string callerInfo = GetCallerInfo(2);
-                string errorInfo = String.Format(ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
-                _Errors.Add(new InjectionError(InjectionErrorType.ValueNotAssignableToTarget, errorInfo));
+                string errorMessage = String.Format(ERROR_VALUE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
+                InjectionErrorType errorType = InjectionErrorType.ValueNotAssignableToTarget;
+
+                //  Add error
+                _Errors.Add(new InjectionError(errorType,errorMessage));
+
+                //  Throw exception
+                if(_ShouldThrowException)
+                {
+                    throw new InjectionException(errorType,errorMessage);
+                }
 
                 return null;
             }
@@ -143,12 +186,21 @@ namespace Minic.DI
             //  Check if type T is assignable to target type
             if (!targetType.IsAssignableFrom(typeof(T)))
             {
-                //  Add error
+                //  Error details
                 string typeAsString = typeof(T).ToString();
                 string targetTypeAsString = targetType.ToString();
                 string callerInfo = GetCallerInfo(2);
-                string errorInfo = String.Format(ERROR_TYPE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
-                _Errors.Add(new InjectionError(InjectionErrorType.TypeNotAssignableToTarget, errorInfo));
+                string errorMessage = String.Format(ERROR_TYPE_NOT_ASSIGNABLE_TO_TARGET, typeAsString, targetTypeAsString, callerInfo);
+                InjectionErrorType errorType = InjectionErrorType.TypeNotAssignableToTarget;
+
+                //  Add error
+                _Errors.Add(new InjectionError(errorType,errorMessage));
+
+                //  Throw exception
+                if(_ShouldThrowException)
+                {
+                    throw new InjectionException(errorType,errorMessage);
+                }
 
                 return null;
             }
