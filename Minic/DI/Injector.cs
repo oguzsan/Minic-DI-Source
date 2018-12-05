@@ -304,34 +304,6 @@ namespace Minic.DI
             {
                 reflection = new ReflectionCache(type);
 
-                MemberInfo[] fieldInfoList = type.FindMembers( MemberTypes.Field, 
-                    BindingFlags.Instance | 
-                    BindingFlags.Public | BindingFlags.NonPublic | 
-                    BindingFlags.SetField | BindingFlags.SetProperty , null, null);
-
-                foreach (MemberInfo fieldInfo in fieldInfoList)
-                {
-                    object[] attributeList = fieldInfo.GetCustomAttributes(typeof(InjectAttribute), true);
-                    if (attributeList.Length > 0)
-                    {
-                        reflection.Fields.AddLast((FieldInfo)fieldInfo);
-                    }
-                }
-
-                MemberInfo[] propertyInfoList = type.FindMembers( MemberTypes.Property,
-                    BindingFlags.Instance | 
-                    BindingFlags.Public | BindingFlags.NonPublic | 
-                    BindingFlags.SetField | BindingFlags.SetProperty , null, null);
-
-                foreach (MemberInfo propertyInfo in propertyInfoList)
-                {
-                    object[] attributeList = propertyInfo.GetCustomAttributes(typeof(InjectAttribute), true);
-                    if (attributeList.Length > 0)
-                    {
-                        reflection.Properties.AddLast((PropertyInfo)propertyInfo);
-                    }
-                }
-
                 _Reflections[type] = reflection;
             }
 
