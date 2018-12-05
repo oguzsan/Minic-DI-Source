@@ -13,5 +13,6 @@ namespace Minic.DI.Error
         TypeNotAssignableToTarget,
         ValueNotAssignableToBindingType,
         CanNotFindBindingForType,
+        BindingAfterInjection
     }
 }

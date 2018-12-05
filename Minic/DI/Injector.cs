@@ -24,6 +24,7 @@ namespace Minic.DI
         private bool _ShouldThrowException;
         private List<InjectionError> _Errors;
         private string[] _ErrorMessages;
+        private bool _IsBindingCompleted;
 
 
         //	CONSTRUCTOR
@@ -40,6 +41,7 @@ namespace Minic.DI
             _ErrorMessages[(int)InjectionErrorType.TypeNotAssignableToTarget            ] = "Injection Error:Given type [{2}] is not assignable to binding type [{1}]\n{0}";
             _ErrorMessages[(int)InjectionErrorType.ValueNotAssignableToBindingType      ] = "Injection Error:Given value of type [{2}] is not assignable to binding type [{1}]\n{0}";
             _ErrorMessages[(int)InjectionErrorType.CanNotFindBindingForType             ] = "Injection Error:Can not find binding for type [{1}]\n{0}";
+            _ErrorMessages[(int)InjectionErrorType.BindingAfterInjection                ] = "Injection Error:Can not add binding for type [{1}] after injecting\n{0}";
         }
 
 
@@ -58,26 +60,38 @@ namespace Minic.DI
         public IInstanceProviderOptions AddBinding<T>()
         {
             Type bindingType = typeof(T);
+            InjectionBinding binding = null;
 
-            InjectionBinding binding;
-            
-            //  Check is there is an existing binding with given type
-            if(_Bindings.TryGetValue(bindingType,out binding))
+            if(!_IsBindingCompleted)
+            {
+
+                //  Check is there is an existing binding with given type
+                if(_Bindings.TryGetValue(bindingType,out binding))
+                {
+                    //  Handler error
+                    InjectionError error = CreateError(InjectionErrorType.AlreadyAddedBindingForType, bindingType, null, 1);
+                    if(_ShouldThrowException)
+                    {
+                        throw new InjectionException(error.Error,error.Message);
+                    }
+                }
+                else
+                {
+                    //  Add binding
+                    binding = new InjectionBinding(bindingType, this);
+                    _Bindings.Add(bindingType, binding);
+                }
+            }
+            else
             {
                 //  Handler error
-                InjectionError error = CreateError(InjectionErrorType.AlreadyAddedBindingForType, bindingType, null, 1);
+                InjectionError error = CreateError(InjectionErrorType.BindingAfterInjection, bindingType, null, 1);
                 if(_ShouldThrowException)
                 {
                     throw new InjectionException(error.Error,error.Message);
                 }
             }
-            else
-            {
-                //  Add binding
-                binding = new InjectionBinding(bindingType, this);
-                _Bindings.Add(bindingType, binding);
-            }
-            
+
             return binding;
         }
 
@@ -88,6 +102,8 @@ namespace Minic.DI
 
         public void InjectInto(object container, IMemberInjector injectionOverride = null)
         {
+            _IsBindingCompleted = true;
+            
             //  Get reflection container for object. Will be performed once per type
             ReflectionCache classReflection = GetReflection(container.GetType());
 
@@ -143,6 +159,8 @@ namespace Minic.DI
 
         public T GetInstance<T>()
         {
+            _IsBindingCompleted = true;
+
             Type bindingType = typeof(T);
 
             object value = null;
@@ -168,6 +186,7 @@ namespace Minic.DI
 
             return (T)value;
         }
+
         #endregion
 
         #region IInstanceProviderList implementations
