@@ -9,6 +9,7 @@ namespace Minic.DI.Provider
     public class SingleInstanceProvider : IInstanceProvider
     {
         //  MEMBERS
+        public Type InstanceType { get{ return _Instance.GetType(); } }
         private object _Instance;
         private bool _IsNew;
 

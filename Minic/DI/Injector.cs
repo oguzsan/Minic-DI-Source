@@ -15,12 +15,13 @@ namespace Minic.DI
     public class Injector : IInjectorTester, IInstanceProviderList, IMemberInjector
     {
         //  MEMBERS
-        public int BindingCount{get{return _Bindings.Count;}}
-        public int ProviderCount{get{return _Providers.Count;}}
-        public int ErrorCount{get{return _Errors.Count;}}
-        private Dictionary<Type, InjectionBinding> _Bindings;
+        public int BindingCount  { get{ return _Bindings.Count;  } }
+        public int ProviderCount { get{ return _Providers.Count; } }
+        public int ErrorCount    { get{ return _Errors.Count;    } }
+        private Dictionary<Type, InjectionBinding>  _Bindings;
         private Dictionary<Type, IInstanceProvider> _Providers;
-        private Dictionary<Type, ReflectionCache> _Reflections;
+        private Dictionary<Type, ReflectionCache>   _Reflections;
+        private Dictionary<Type, object>            _AssignableInstances;
         private bool _ShouldThrowException;
         private List<InjectionError> _Errors;
         private string[] _ErrorMessages;
@@ -33,6 +34,7 @@ namespace Minic.DI
             _Bindings = new Dictionary<Type, InjectionBinding>();
             _Providers = new Dictionary<Type, IInstanceProvider>();
             _Reflections = new Dictionary<Type, ReflectionCache>();
+            _AssignableInstances = new Dictionary<Type, object>();
             _ShouldThrowException = shouldThrowException;
             _Errors = new List<InjectionError>();
             _ErrorMessages = new string[Enum.GetValues(typeof(InjectionErrorType)).Length];
@@ -185,6 +187,42 @@ namespace Minic.DI
             }
 
             return (T)value;
+        }
+
+        public IEnumerator<T> GetAssignableInstances<T>()
+        {
+            _IsBindingCompleted = true;
+
+            Type typeToAssign = typeof(T);
+
+            HashSet<T> assignableInstances;
+            object instances;
+            if(!_AssignableInstances.TryGetValue(typeToAssign, out instances))
+            {
+                assignableInstances = new HashSet<T>();
+                _AssignableInstances.Add(typeToAssign, assignableInstances);
+
+                foreach(IInstanceProvider provider in _Providers.Values)
+                {
+                    if(typeToAssign.IsAssignableFrom(provider.InstanceType))
+                    {
+                        object value = null;
+                        bool isNew;
+                        provider.GetInstance(out value, out isNew);
+                        if (isNew)
+                        {
+                            InjectInto(value);
+                        }
+                        assignableInstances.Add((T)value);
+                    }
+                }
+            }
+            else
+            {
+                assignableInstances = (HashSet<T>)instances;
+            }
+            
+            return assignableInstances.GetEnumerator();
         }
 
         #endregion

@@ -9,6 +9,7 @@ namespace Minic.DI.Provider
     public class NewInstanceProvider<T> : IInstanceProvider where T : new()
     {
         //	MEMBERS
+        public Type InstanceType { get{ return typeof(T); } }
         private object _Instance;
 
 
