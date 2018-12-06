@@ -10,6 +10,7 @@ namespace Minic.DI.Provider
     {
         //  MEMBERS
         public Type InstanceType { get{ return _Instance.GetType(); } }
+        public Action<object> PostInjectionCallback{get; private set;}
         private object _Instance;
         private bool _IsNew;
 
@@ -23,6 +24,11 @@ namespace Minic.DI.Provider
 
 
         //  METHODS
+        public void SetPostInjectionCallback(Action<object> postInjectionCallback)
+        {
+            PostInjectionCallback = postInjectionCallback;
+        }
+        
         public void GetInstance(out object instance, out bool isNew)
         {
             instance = _Instance;

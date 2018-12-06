@@ -7,7 +7,7 @@ using Minic.DI.Provider;
 
 namespace Minic.DI
 {
-    public class InjectionBinding : IInstanceProviderOptions
+    public class InjectionBinding : IInstanceProviderSetter
     {
         //	MEMBERS
         public readonly Type BindingType;
@@ -25,14 +25,16 @@ namespace Minic.DI
 
 
         //  METHODS
-        public void ToValue(object value)
+        public IInstanceProviderOptions ToValue(object value)
         {
             InstanceProvider = _InstanceProviderList.AddValue(BindingType, value);
+            return InstanceProvider;
         }
 
-        public void ToType<T>() where T : new()
+        public IInstanceProviderOptions ToType<T>() where T : new()
         {
             InstanceProvider = _InstanceProviderList.AddType<T>(BindingType);
+            return InstanceProvider;
         }
     }
 }

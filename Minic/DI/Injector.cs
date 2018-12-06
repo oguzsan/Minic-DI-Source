@@ -59,7 +59,7 @@ namespace Minic.DI
 
         #region IInjector implementations
 
-        public IInstanceProviderOptions AddBinding<T>()
+        public IInstanceProviderSetter AddBinding<T>()
         {
             Type bindingType = typeof(T);
             InjectionBinding binding = null;
@@ -175,6 +175,10 @@ namespace Minic.DI
                 {
                     InjectInto(value);
                 }
+                if (binding.InstanceProvider.PostInjectionCallback!=null)
+                {
+                    binding.InstanceProvider.PostInjectionCallback(value);
+                }
             }
             else
             {
@@ -212,6 +216,10 @@ namespace Minic.DI
                         if (isNew)
                         {
                             InjectInto(value);
+                        }
+                        if (provider.PostInjectionCallback!=null)
+                        {
+                            provider.PostInjectionCallback(value);
                         }
                         assignableInstances.Add((T)value);
                     }

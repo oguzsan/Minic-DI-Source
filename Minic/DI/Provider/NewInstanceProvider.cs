@@ -10,6 +10,7 @@ namespace Minic.DI.Provider
     {
         //	MEMBERS
         public Type InstanceType { get{ return typeof(T); } }
+        public Action<object> PostInjectionCallback{get; private set;}
         private object _Instance;
 
 
@@ -19,6 +20,11 @@ namespace Minic.DI.Provider
 
 
         //  METHODS
+        public void SetPostInjectionCallback(Action<object> postInjectionCallback)
+        {
+            PostInjectionCallback = postInjectionCallback;
+        }
+        
         public void GetInstance(out object value, out bool isNew)
         {
             if(_Instance==null)

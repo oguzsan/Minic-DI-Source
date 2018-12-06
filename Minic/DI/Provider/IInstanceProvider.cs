@@ -6,12 +6,14 @@ using System;
 
 namespace Minic.DI.Provider
 {
-    public interface IInstanceProvider
+    public interface IInstanceProvider : IInstanceProviderOptions
     {
         //  MEMBERS
         Type InstanceType { get; }
+        Action<object> PostInjectionCallback{get;}
         
         //  METHODS
+
         void GetInstance( out object instance, out bool isNew );
     }
 }
