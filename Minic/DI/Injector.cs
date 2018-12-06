@@ -237,7 +237,7 @@ namespace Minic.DI
 
         #region IInstanceProviderList implementations
 
-        public IInstanceProvider AddValue(Type bindingType, object value)
+        public IInstanceProvider AddValueProvider(Type bindingType, object value)
         {
             Type providerType = value.GetType();
 
@@ -278,7 +278,7 @@ namespace Minic.DI
             return provider;
         }
 
-        public IInstanceProvider AddType<T>(Type bindingType) where T : new()
+        public IInstanceProvider AddTypedProvider<T>(Type bindingType) where T : new()
         {
             Type providerType = typeof(T);
 

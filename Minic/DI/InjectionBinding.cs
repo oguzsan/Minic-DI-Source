@@ -27,13 +27,13 @@ namespace Minic.DI
         //  METHODS
         public IInstanceProviderOptions ToValue(object value)
         {
-            InstanceProvider = _InstanceProviderList.AddValue(BindingType, value);
+            InstanceProvider = _InstanceProviderList.AddValueProvider(BindingType, value);
             return InstanceProvider;
         }
 
         public IInstanceProviderOptions ToType<T>() where T : new()
         {
-            InstanceProvider = _InstanceProviderList.AddType<T>(BindingType);
+            InstanceProvider = _InstanceProviderList.AddTypedProvider<T>(BindingType);
             return InstanceProvider;
         }
     }

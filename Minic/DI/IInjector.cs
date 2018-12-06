@@ -17,6 +17,7 @@ namespace Minic.DI
 
         //  METHODS
         IInstanceProviderSetter AddBinding<T>();
+        bool HasBindingForType(Type type);
         InjectionError GetError(int index);
         void InjectInto(object container, IMemberInjector injectionOverride = null);
         T GetInstance<T>();
