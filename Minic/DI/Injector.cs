@@ -169,16 +169,7 @@ namespace Minic.DI
             InjectionBinding binding = null;
             if (_Bindings.TryGetValue(bindingType, out binding) == true)
             {
-                bool isNew;
-                binding.InstanceProvider.GetInstance(out value, out isNew);
-                if (isNew)
-                {
-                    InjectInto(value);
-                }
-                if (binding.InstanceProvider.PostInjectionCallback!=null)
-                {
-                    binding.InstanceProvider.PostInjectionCallback(value);
-                }
+                value = GetInstanceAndInit(binding.InstanceProvider);
             }
             else
             {
@@ -328,13 +319,7 @@ namespace Minic.DI
             InjectionBinding binding = null;
             if (_Bindings.TryGetValue(fieldInfo.FieldType, out binding) == true)
             {
-                object value;
-                bool isNew;
-                binding.InstanceProvider.GetInstance(out value, out isNew);
-                if (isNew)
-                {
-                    InjectInto(value);
-                }
+                object value = GetInstanceAndInit(binding.InstanceProvider);
                 fieldInfo.SetValue(container, value);
                 return true;
             }
@@ -346,13 +331,7 @@ namespace Minic.DI
             InjectionBinding binding = null;
             if (_Bindings.TryGetValue(propertyInfo.PropertyType, out binding) == true)
             {
-                object value;
-                bool isNew;
-                binding.InstanceProvider.GetInstance(out value, out isNew);
-                if (isNew)
-                {
-                    InjectInto(value);
-                }
+                object value = GetInstanceAndInit(binding.InstanceProvider);
                 propertyInfo.SetValue(container, value, null);
                 return true;
             }
@@ -360,6 +339,22 @@ namespace Minic.DI
         }
         
         #endregion
+
+        private object GetInstanceAndInit(IInstanceProvider instanceProvider)
+        {
+            object value = null;
+            bool isNew;
+            instanceProvider.GetInstance(out value, out isNew);
+            if (isNew)
+            {
+                InjectInto(value);
+                if (instanceProvider.PostInjectionCallback != null)
+                {
+                    instanceProvider.PostInjectionCallback(value);
+                }
+            }
+            return value;
+        }
 
         private ReflectionCache GetReflection(Type type)
         {
